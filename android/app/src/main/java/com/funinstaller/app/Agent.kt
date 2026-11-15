@@ -63,6 +63,10 @@ class Agent(
     private var helpReason = ""
     private var lastSignature = ""
     private var sameScreen = 0
+    private var lastActionWasOnScreen = false
+    private val onScreenActions = setOf(
+        "tap", "long_press", "tap_position", "type_text", "scroll", "press_key", "open_app", "open_link",
+    )
     private var failures = 0
     private var noAction = 0
     private var rescues = 0
@@ -103,7 +107,10 @@ class Agent(
                 }
             }
 
-            sameScreen = if (screen.signature == lastSignature) sameScreen + 1 else 0
+            // Only taps/typing/scrolling that change nothing count as "stuck";
+            // downloads, installs and questions legitimately leave the screen as it was.
+            if (screen.signature != lastSignature) sameScreen = 0
+            else if (lastActionWasOnScreen) sameScreen++
             lastSignature = screen.signature
             if (sameScreen >= 3 && helpReason.isEmpty()) helpReason = "The screen hasn't changed for 3 turns."
             if (failures >= 2 && helpReason.isEmpty()) helpReason = "The last actions failed."
@@ -326,6 +333,7 @@ class Agent(
         }
         record(rescue, action, result)
         failures = if (result.startsWith("failed") || result.startsWith("refused")) failures + 1 else 0
+        lastActionWasOnScreen = name in onScreenActions
         return null
     }
 

@@ -150,7 +150,7 @@ class AgentService : AccessibilityService() {
 
     /** Runs [block], hiding Fun Installer's card first if the touch would land on it. */
     private suspend fun <T> clearOfOverlay(x: Int, y: Int, block: suspend () -> T): T {
-        val covering = overlay.bounds().contains(x, y)
+        val covering = withContext(Dispatchers.Main) { overlay.bounds().contains(x, y) }
         if (covering) {
             overlay.setHidden(true)
             delay(120)
