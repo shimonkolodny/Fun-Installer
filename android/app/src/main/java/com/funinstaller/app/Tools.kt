@@ -71,6 +71,11 @@ object Tools {
             mapOf("success" to bool("Whether the goal was reached."), "summary" to str("2-4 sentences for the user: what was installed or set up, and anything left for them to do."))),
     )
 
+    /** The same tools without strict mode, for requests that also carry web search/fetch. */
+    fun forWeb(tools: List<BetaTool>): List<BetaTool> = tools.map { it.toBuilder().strict(false).build() }
+
+    val executorForWeb: List<BetaTool> by lazy { forWeb(executor) }
+
     val revisePlan: BetaTool = Claude.tool(
         "revise_plan",
         "Replace the remaining (not yet finished) plan steps, for example when the plan turned out to be wrong. New downloads must be from official sources; the user is asked to approve them.",

@@ -76,10 +76,10 @@ class Planner(private val claude: Claude, private val meter: CostMeter, private 
         }
         val history = mutableListOf<Any>(user) // String = user text, BetaMessage = assistant turn
         repeat(8) {
-            val b = Claude.request(models.planner, system, BetaOutputConfig.Effort.MEDIUM, 16000)
+            val b = Claude.request(models.planner, system, BetaOutputConfig.Effort.MEDIUM, 16000, withWebTools = true)
                 .addTool(BetaWebSearchTool20260209.builder().maxUses(8L).build())
                 .addTool(BetaWebFetchTool20260209.builder().maxUses(12L).build())
-                .addTool(Tools.submitPlan)
+            Tools.forWeb(listOf(Tools.submitPlan)).forEach { b.addTool(it) }
             history.forEach { if (it is String) b.addUserMessage(it) else b.addMessage(it as BetaMessage) }
             val msg = claude.send(b.build(), models.planner, meter)
             if (Claude.isRefusal(msg)) {

@@ -215,12 +215,15 @@ class Agent(
                     if (rescue) Prompts.RESCUER else Prompts.EXECUTOR,
                     if (rescue) BetaOutputConfig.Effort.MEDIUM else BetaOutputConfig.Effort.LOW,
                     if (rescue) 16000 else 4096,
+                    withWebTools = rescue,
                 )
-                Tools.executor.forEach { b.addTool(it) }
                 if (rescue) {
-                    b.addTool(Tools.revisePlan)
+                    // The helper also gets web search, so its tools must be non-strict (see Tools.forWeb).
+                    (Tools.executorForWeb + Tools.forWeb(listOf(Tools.revisePlan))).forEach { b.addTool(it) }
                     b.addTool(BetaWebSearchTool20260209.builder().maxUses(5L).build())
                     b.addTool(BetaWebFetchTool20260209.builder().maxUses(8L).build())
+                } else {
+                    Tools.executor.forEach { b.addTool(it) }
                 }
                 b.addUserMessageOfContentBlockParams(content)
                 earlier.forEach { b.addMessage(it) }

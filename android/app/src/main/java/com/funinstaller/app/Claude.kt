@@ -104,8 +104,19 @@ class Claude(apiKey: String) : AutoCloseable {
     companion object {
         private const val FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
-        /** A request with the system prompt cached and effort set. */
-        fun request(model: String, system: String, effort: BetaOutputConfig.Effort, maxTokens: Long): MessageCreateParams.Builder {
+        /**
+         * A request with the system prompt cached and effort set.
+         * [withWebTools]: the request includes web_search/web_fetch, whose dynamic filtering runs
+         * through programmatic tool calling, which doesn't allow disable_parallel_tool_use
+         * (or strict tools; see [Tools.forWeb]).
+         */
+        fun request(
+            model: String,
+            system: String,
+            effort: BetaOutputConfig.Effort,
+            maxTokens: Long,
+            withWebTools: Boolean = false,
+        ): MessageCreateParams.Builder {
             val b = MessageCreateParams.builder()
                 .model(model)
                 .maxTokens(maxTokens)
@@ -116,7 +127,7 @@ class Claude(apiKey: String) : AutoCloseable {
                         .build(),
                 ))
                 .outputConfig(BetaOutputConfig.builder().effort(effort).build())
-                .toolChoice(BetaToolChoiceAuto.builder().disableParallelToolUse(true).build())
+            if (!withWebTools) b.toolChoice(BetaToolChoiceAuto.builder().disableParallelToolUse(true).build())
             // Server-side fallback: if a request is declined by a safety classifier,
             // the API retries it on a fallback model. (Haiku has no fallback.)
             if (model != Models.HAIKU) b.addBeta(FALLBACK_BETA).fallbacksDefault()
