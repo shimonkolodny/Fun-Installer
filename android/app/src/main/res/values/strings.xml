@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fun Installer</string>
+    <string name="accessibility_description">Lets Fun Installer see the screen and tap, type and scroll for you while it installs and sets up the apps you ask for. It only acts while a job you started is running, never works inside banking, password or messaging apps, and you can stop it at any time with the Stop button.</string>
+</resources>
