@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(phone status:*)",
+      "Bash(phone info:*)",
+      "Bash(phone connect:*)",
+      "Bash(phone screen:*)",
+      "Bash(phone shot:*)",
+      "Bash(phone tap:*)",
+      "Bash(phone type:*)",
+      "Bash(phone key:*)",
+      "Bash(phone scroll:*)",
+      "Bash(phone swipe:*)",
+      "Bash(phone wait:*)",
+      "Bash(phone open:*)",
+      "Bash(phone url:*)",
+      "Bash(phone apps:*)",
+      "Bash(phone app:*)",
+      "Bash(phone current:*)",
+      "Bash(phone termux:*)",
+      "Bash(phone download:*)",
+      "Bash(phone unpack:*)",
+      "Bash(phone ls:*)",
+      "Bash(phone mkdir:*)",
+      "WebSearch",
+      "WebFetch"
+    ],
+    "ask": [
+      "Bash(phone install:*)",
+      "Bash(phone uninstall:*)",
+      "Bash(phone push:*)",
+      "Bash(phone pull:*)",
+      "Bash(phone grant:*)",
+      "Bash(phone shell:*)",
+      "Bash(phone fix-background:*)",
+      "Bash(adb:*)"
+    ]
+  }
+}
