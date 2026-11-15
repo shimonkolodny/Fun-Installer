@@ -15,24 +15,9 @@ android {
         versionName = "0.1." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
     }
 
-    signingConfigs {
-        // A fixed key committed to this private repo, so every build can update
-        // the previous one without uninstalling (which would erase settings).
-        getByName("debug") {
-            storeFile = file("fun-installer.keystore")
-            storePassword = "funinstaller"
-            keyAlias = "funinstaller"
-            keyPassword = "funinstaller"
-        }
-    }
-
     buildTypes {
-        getByName("debug") {
-            signingConfig = signingConfigs.getByName("debug")
-        }
         getByName("release") {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

@@ -44,6 +44,13 @@ elif verb == "exec-out":
                                 + (2560).to_bytes(4, "big"))
 elif verb == "connect":
     print(f"connected to {args[1]}")
+elif verb == "mdns":
+    print(read("mdns.txt", "List of discovered mdns services").strip())
+elif verb == "pair":
+    if args[1] == read("pair_target.txt", args[1]).strip() and args[2] == "123456":
+        print(f"Successfully paired to {args[1]} [guid=adb-XYZ]")
+    else:
+        print(f"Failed: Wrong password or connection was dropped.")
 elif verb in ("install", "install-multiple"):
     print(read("install.txt", "Performing Streamed Install\nSuccess").strip())
     if "Success" in read("install.txt", "Success"):

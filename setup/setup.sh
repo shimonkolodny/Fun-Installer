@@ -78,10 +78,13 @@ else
   echo "Couldn't reach Termux's home folder. Skipping (you can still start with: fun-installer)."
 fi
 
+# The one-step Termux setup (termux-bootstrap.sh) walks through the rest itself.
+[ -n "${FUN_BOOTSTRAP:-}" ] && exit 0
+
 cat <<EOF
 
 $(printf '\033[1;32m')Setup finished.$(printf '\033[0m') Next steps (details in README.md):
-  1. Pair once with Wireless debugging:   phone pair <port> <code>
+  1. Pair once with Wireless debugging:   phone pair <code>
   2. Connect:                             phone connect
   3. Keep Termux alive in the background: phone fix-background
   4. Start Claude:                        fun-installer

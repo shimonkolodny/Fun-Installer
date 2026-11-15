@@ -190,6 +190,34 @@ class PhoneTest(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("DELETES its data", r.stderr)
 
+    # ----------------------------------------------------- pairing & loops
+    def test_pair_with_code_only_finds_port(self):
+        (self.fake / "mdns.txt").write_text(
+            "List of discovered mdns services\nadb-XYZ\t_adb-tls-pairing._tcp\t192.168.1.5:37011")
+        (self.fake / "pair_target.txt").write_text("localhost:37011")
+        r = self.phone("pair", "123456")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("Paired with localhost:37011", r.stdout)
+        self.assertIn(["pair", "localhost:37011", "123456"], self.log())
+
+    def test_pair_rejects_bad_code(self):
+        r = self.phone("pair", "12ab")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("6-digit", r.stderr)
+
+    def test_warns_when_going_in_circles(self):
+        other = SAMPLE.replace("Emulator Setup", "Other Screen")
+        for i in range(6):
+            (self.fake / "dump.xml").write_text(SAMPLE if i % 2 == 0 else other)
+            r = self.phone("screen")
+        self.assertIn("going in circles", r.stdout)
+
+    def test_no_loop_warning_for_normal_progress(self):
+        for i in range(6):
+            (self.fake / "dump.xml").write_text(SAMPLE.replace("Emulator Setup", f"Screen {i}"))
+            r = self.phone("screen")
+        self.assertNotIn("going in circles", r.stdout)
+
     # ---------------------------------------------------------------- misc
     def test_shot_records_size(self):
         r = self.phone("shot")

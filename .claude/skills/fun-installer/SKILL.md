@@ -38,6 +38,17 @@ tapping commands, so it runs without interrupting them.
    make purchases, or read personal content. Hand those steps to the user.
    `phone` refuses to work in apps listed in `config/blocked-apps.txt` and in
    Termux itself. Don't try to get around that.
+6. **Never use file-manager or archive apps for files.** Don't open ZArchiver,
+   Files, MiXplorer, Solid Explorer or similar to download, extract, move or
+   copy anything. Do it with commands: `phone download`, `phone unpack`,
+   `phone mkdir`, `phone push`, `phone ls`. Each is one step and can't get
+   lost in menus. Only tap through an app's own screens for that app's
+   settings, or for its own "import"/"choose folder" option when there's no
+   other way.
+7. **Don't go in circles.** If `phone screen` starts with "WARNING: you are
+   going in circles", or two attempts at the same thing haven't worked, stop
+   tapping. Change approach (usually a command instead of the screen), and if
+   you're still stuck, run `phone termux` and ask the user.
 
 ## The loop: look, act, look again
 
@@ -165,5 +176,6 @@ from scratch. The user never has to write these.
 - An install dialog or Play Protect warning appears: read it to the user. Don't
   turn off Play Protect. Tapping "Install anyway" for an app from an official
   source is fine only after the user says yes.
-- You're stuck (the same screen three times, or something unexpected): stop,
-  run `phone termux`, and ask the user instead of tapping around.
+- You're stuck (a going-in-circles warning, the same screen three times, or
+  something unexpected): stop, run `phone termux`, and ask the user instead of
+  tapping around.

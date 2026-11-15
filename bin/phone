@@ -292,6 +292,8 @@ def render(scr: dict) -> str:
         head += f"  (also on screen: {', '.join(others)})"
     head += f"  | area {x1},{y1} to {x2},{y2}"
     lines = [head]
+    if scr.get("warning"):
+        lines.insert(0, scr["warning"])
     if scr.get("blocked"):
         lines.append(f"(not shown) {scr['blocked']}")
         return "\n".join(lines)
@@ -336,11 +338,35 @@ def mark_stale(action: str):
             pass
 
 
-def read_screen() -> dict:
+RECENT = STATE / "recent-screens.json"
+
+
+def loop_warning(scr: dict) -> str | None:
+    """Remember recent screens; warn when the same one or two keep coming back."""
+    sig = hashlib.sha1((scr["pkg"] + "|" + "|".join(
+        it["label"] + "/".join(it["subs"]) for it in scr["items"])).encode()).hexdigest()[:12]
+    try:
+        recent = json.loads(RECENT.read_text()) if RECENT.exists() else []
+    except (OSError, ValueError):
+        recent = []
+    now = time.time()
+    recent = [r for r in recent if now - r.get("t", 0) < 900][-11:] + [{"s": sig, "t": now}]
+    STATE.mkdir(parents=True, exist_ok=True)
+    RECENT.write_text(json.dumps(recent))
+    last = [r["s"] for r in recent[-8:]]
+    if len(last) >= 6 and len(set(last)) <= 2:
+        return (f"WARNING: you are going in circles: the last {len(last)} screens were the same "
+                f"{len(set(last))} screen(s). Stop and change approach (for files, use phone download / "
+                "unpack / push instead of a file manager). If still stuck, run phone termux and ask the user.")
+    return None
+
+
+def read_screen(track: bool = True) -> dict:
     scr = parse(dump_xml())
     scr["blocked"] = block_reason(scr["pkg"], "read")
     if scr["blocked"]:
         scr["items"] = []
+    scr["warning"] = loop_warning(scr) if track else None
     save_screen(scr)
     return scr
 
@@ -421,14 +447,36 @@ def cmd_info(a):
 
 
 def cmd_pair(a):
-    target = a.port if ":" in a.port else f"localhost:{a.port}"
-    r = run(["pair", target, a.code], use_serial=False, check=False, timeout=30)
-    out = (r.stdout + r.stderr).strip()
-    print(out)
-    if "Successfully paired" not in out:
-        die("Pairing failed. The code and port change each time the pairing dialog opens, and the "
-            "dialog must stay open while pairing (use split screen).")
-    print("Paired. Now run: phone connect")
+    if len(a.args) == 1:
+        port, code = None, a.args[0]
+    elif len(a.args) == 2:
+        port, code = a.args
+    else:
+        die("Usage: phone pair <code>   (or: phone pair <port> <code>)")
+    if not re.fullmatch(r"\d{6}", code):
+        die("The pairing code is the 6-digit number in the 'Pair device with pairing code' dialog.")
+    if port:
+        targets = [port if ":" in port else f"localhost:{port}"]
+    else:
+        targets = []
+        r = run(["mdns", "services"], use_serial=False, check=False, timeout=10)
+        for line in r.stdout.splitlines():
+            m = re.search(r"_adb-tls-pairing\S*\s+(\d+\.\d+\.\d+\.\d+):(\d+)", line)
+            if m:
+                targets.append(f"localhost:{m.group(2)}")
+        if not targets:
+            print("Looking for the pairing port…", flush=True)
+            targets = [f"localhost:{p}" for p in _scan(30000, 61000)]
+    last = ""
+    for target in dict.fromkeys(targets):
+        r = run(["pair", target, code], use_serial=False, check=False, timeout=15)
+        out = (r.stdout + r.stderr).strip()
+        if "Successfully paired" in out:
+            print(f"Paired with {target}. Now run: phone connect")
+            return
+        last = out or last
+    die("Pairing failed" + (f" ({last.splitlines()[-1]})" if last else "") + ". Keep the 'Pair device with "
+        "pairing code' dialog open (use split screen) and type the code it shows right now.")
 
 
 def _try_connect(target: str):
@@ -465,7 +513,7 @@ def cmd_connect(a):
         target = a.port if ":" in a.port else f"localhost:{a.port}"
         ok, out = _try_connect(target)
         if not ok:
-            die(f"{out}\nIf you've never paired this device, pair first: phone pair <port> <code>")
+            die(f"{out}\nIf you've never paired this device, pair first: phone pair <code>")
         _connected(target)
         return
     ready = [s for s, st in list_devices() if st == "device"]
@@ -489,7 +537,7 @@ def cmd_connect(a):
             return _connected(f"localhost:{port}")
     die("Couldn't find the wireless debugging port.\n"
         "1. Wi-Fi must be on, and Settings > Developer options > Wireless debugging must be ON.\n"
-        "2. Never paired? Tap 'Pair device with pairing code', then run: phone pair <port> <code>\n"
+        "2. Never paired? Tap 'Pair device with pairing code', then run: phone pair <code>\n"
         "3. Or give the port shown under 'IP address & Port': phone connect <port>")
 
 
@@ -660,7 +708,7 @@ def cmd_swipe(a):
 def cmd_wait(a):
     deadline = time.time() + a.timeout
     while True:
-        scr = read_screen()
+        scr = read_screen(track=False)
         hits = [] if scr.get("blocked") else find(scr["items"], a.text)
         done = (not hits) if a.gone else bool(hits)
         if done:
@@ -1032,8 +1080,8 @@ def build_parser():
     add("status", cmd_status, "Is a device connected? Shows model and the app in front.")
     add("info", cmd_info, "Device details: Android version, CPU type (ABI), screen, free storage.")
     sp = add("pair", cmd_pair, "Pair with Wireless debugging (once per device).")
-    sp.add_argument("port", help="pairing port (or host:port) from the 'Pair device with pairing code' dialog")
-    sp.add_argument("code", help="6-digit pairing code")
+    sp.add_argument("args", nargs="+", metavar="[PORT] CODE",
+                    help="the 6-digit code from 'Pair device with pairing code' (the port is found automatically)")
     sp = add("connect", cmd_connect, "Connect to Wireless debugging. Finds the port by itself if omitted.")
     sp.add_argument("port", nargs="?", help="port (or host:port) shown under 'IP address & Port'")
 
