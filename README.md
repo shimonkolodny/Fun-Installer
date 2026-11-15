@@ -1,162 +1,111 @@
 # Fun Installer
 
-Ask Claude to install apps, emulators and emulator mods on your Android tablet,
-and it does the work itself: it researches the official download, installs it,
-taps through the setup screens, and puts mod files in the right folders.
+An Android app that installs apps, emulators and emulator mods for you. Tell it
+what you want; it finds the official download, installs it, and taps through the
+setup screens itself while you watch.
 
-It runs entirely on the tablet and uses your normal Claude subscription through
-Claude Code. **No API key needed.**
+## Get started (about 5 minutes)
 
-```
-Termux ─▶ Ubuntu (proot-distro) ─▶ Claude Code ─▶ phone ─▶ ADB Wireless debugging ─▶ the same tablet
-```
+1. **Download the app on your tablet.** In the tablet's browser, sign in to
+   GitHub (this repo is private), open
+   **[Releases → latest](https://github.com/shimonkolodny/Fun-Installer/releases/latest)**
+   and download **FunInstaller.apk**.
+2. **Install it.** Open the downloaded file. If Android asks, allow your browser
+   to install apps. If Play Protect warns about an unknown app, tap
+   **More details → Install anyway**. It warns because the app isn't from the
+   Play Store and it uses Accessibility.
+3. **Open Fun Installer and do the 3 setup steps it shows:**
+   1. **Claude API key:** create one at
+      [console.anthropic.com → API keys](https://console.anthropic.com/settings/keys)
+      and add some credit to your account.
+   2. **Let it control the screen:** turn on Fun Installer in Accessibility
+      settings. If the switch is greyed out, open App info, tap **⋮** →
+      **Allow restricted settings**, then try again.
+   3. **Allow installing apps:** turn on "Allow from this source".
+4. **Ask for something,** for example *"Install the PPSSPP emulator and set my
+   games folder to Download/Games"*, then tap **Make a plan**. Read the plan,
+   and tap **Start**.
 
-## What you need
+## How it works
 
-- An Android tablet with **Android 11 or newer**, on **Wi-Fi** (Wireless
-  debugging only works on Wi-Fi).
-- A Claude account that can use Claude Code (for example Pro or Max).
-- About 3 GB of free space.
+1. **Planning:** Claude Sonnet 5.5 searches the web for the official download
+   and a current guide, then writes a step-by-step plan. You see every download
+   link and step before anything happens.
+2. **Doing:** Claude Haiku 5.5 carries out the plan one tap at a time: it reads
+   the screen, taps, types and scrolls. When it gets stuck, Sonnet takes over for
+   a moment with a screenshot, then hands back.
+3. **Watching:** a small floating card shows what it's doing and what it has cost
+   so far. It has a **Stop** button. Drag the card by its title if it's in the
+   way.
+4. **Your turn:** you always tap **Install** on Android's install screens and
+   answer permission pop-ups yourself. The card asks before system settings
+   change, and tells you when something is yours to do, like signing in or
+   providing your own game files.
+5. **It remembers:** after each job it saves notes on what worked, so similar
+   jobs go better next time.
 
-## One-time setup (about 20 minutes)
+### What it costs
 
-### 1. Install Termux
+You pay Anthropic for the AI use, billed to your API key. Rough estimates:
 
-Get it from [F-Droid](https://f-droid.org/packages/com.termux/) or
-[GitHub releases](https://github.com/termux/termux-app/releases). Those builds
-are the recommended ones.
+| Mode | Who does what | Typical job |
+|---|---|---|
+| **Saver** (default) | Sonnet plans and helps when stuck, Haiku taps | a few cents to well under $1 |
+| **Best quality** | Opus 5.5 plans and helps, Sonnet taps | several times more |
 
-### 2. Install Ubuntu inside Termux
+Every job has a **spending limit** (default $1.00, set it in the app). Fun
+Installer asks before going over it, and shows the running total on the card.
 
-Open Termux and run:
+## Safety
 
-```sh
-pkg update -y && pkg upgrade -y
-pkg install -y proot-distro
-proot-distro install ubuntu
-proot-distro login ubuntu
-```
+These are enforced by the app's code, whatever the AI decides:
 
-The prompt changes to `root@localhost`, which means you're inside Ubuntu.
-Run all the following steps there.
+- **Downloads only from the plan you approved.** New links mid-job need your OK.
+- **You confirm every install and every permission pop-up.** The AI waits while
+  those screens are open.
+- **No purchases or passwords.** It won't tap buy/subscribe buttons or type into
+  password fields.
+- **Private apps are off limits.** Banking, payment, password, authenticator,
+  messaging and email apps can't be read or controlled.
+- **Official sources only, no BIOS, firmware, keys or games.** The AI is told
+  this, and it hands those files to you to provide.
+- **To stop instantly:** tap **Stop** on the card, or turn off Fun Installer in
+  Accessibility.
 
-### 3. Download Fun Installer and run setup
+## Limits right now
 
-This repo is private, so sign in to GitHub first:
+- It can't write directly into other apps' private folders
+  (`/sdcard/Android/data/…`) or open `.7z`/`.rar` archives. It puts files in
+  `/sdcard/Download/FunInstaller/` and uses the app's own import or folder
+  options instead.
+- Games and some emulator menus draw their own screens, so the app has to use
+  screenshots there, which is slower and costs a little more.
+- It's new and hasn't been tested on many tablets yet. Expect rough edges and
+  tell Claude what went wrong.
 
-```sh
-apt update && apt install -y git gh
-gh auth login
-```
+## Updating
 
-Choose **GitHub.com → HTTPS → Login with a web browser**. It shows a one-time
-code and a link: long-press the link in Termux to open it, then enter the code.
-
-```sh
-gh repo clone shimonkolodny/Fun-Installer ~/Fun-Installer
-cd ~/Fun-Installer
-bash setup/setup.sh
-```
-
-### 4. Turn on Wireless debugging
-
-1. **Settings → About tablet → tap "Build number" 7 times** to unlock Developer
-   options. On Samsung it's under About tablet → Software information.
-2. **Settings → System → Developer options → Wireless debugging → On.** Allow
-   it for your Wi-Fi network.
-
-### 5. Pair Termux with Wireless debugging (once)
-
-The pairing code disappears if you leave the Settings screen, so use **split
-screen**: open Recents, tap the Termux icon at the top of its card, choose
-**Split screen**, and put Settings in the other half.
-
-1. In Wireless debugging, tap **Pair device with pairing code**. It shows a
-   6-digit code and an address like `192.168.1.20:41235`.
-2. In Termux, using the number after the colon:
-   ```sh
-   phone pair 41235 123456
-   phone connect
-   phone fix-background
-   ```
-   `fix-background` stops Android from closing Termux while Claude works in
-   other apps. If your tablet has a battery setting for Termux, set it to
-   **Unrestricted** too.
-
-### 6. Sign in to Claude
-
-```sh
-fun-installer
-```
-
-Choose your Claude account and follow the link it shows (long-press to open it).
-Paste the code back into Termux.
-
-## Using it
-
-Open Termux and type **`fun`**. Inside Ubuntu, `fun-installer` does the same.
-Then just ask:
-
-- *"Install the PPSSPP emulator and set my games folder to /sdcard/Games"*
-- *"Add the HD texture pack for <game> to <emulator>"*
-- *"Update RetroArch and set up my controller"*
-
-What to expect:
-
-- **Claude works in the other apps**, so Termux disappears behind them. When it
-  needs you, it brings Termux back to the front.
-- **You approve the important steps.** Installing, uninstalling, copying files
-  onto the tablet, granting permissions and raw commands always wait for your
-  OK. Reading the screen, tapping, typing and downloading don't.
-- **Your own game files and BIOS:** Claude never downloads these. It tells you
-  which file is needed and where to put it.
-- **It learns:** after each install it writes what worked to `notes/`, so next
-  time is faster.
-- **To stop it:** switch to Termux and press **ESC** (on the extra keys row).
-  For an instant hard stop, turn off Wireless debugging.
-
-### After a reboot or Wi-Fi change
-
-Wireless debugging switches itself off. Turn it back on, then start `fun` as
-usual. Claude reconnects with `phone connect`. You don't need to pair again.
-
-## Safety built in
-
-These are enforced by the `phone` tool itself, not just by Claude's instructions:
-
-- **It never taps or types in Termux**, so Claude can't approve its own
-  requests.
-- **Blocked apps:** banking, payment, password, authenticator, messaging and
-  email apps can't be read, screenshotted or controlled. Edit
-  [`config/blocked-apps.txt`](config/blocked-apps.txt) to add more.
-- **Files only go into shared storage** (`/sdcard/...`), never system folders.
-- **No out-of-date taps:** Claude must look at the screen again after every
-  action before tapping by number.
-
-Claude's own rules (in [the skill](.claude/skills/fun-installer/SKILL.md)):
-official download sources only, no BIOS, firmware, keys or ROMs, no cracked
-apps, and anything a web page or tutorial "tells" it to do is treated as
-information, not orders.
+Download the latest **FunInstaller.apk** again and install it over the old one.
+Your settings and API key are kept.
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---|---|
-| `claude` won't start inside Ubuntu | Claude Code doesn't officially support Android. Running it in Ubuntu under proot usually works, but not always. Note the error message and share it in a Claude chat. |
-| `phone pair` fails | The pairing dialog must stay open (use split screen), and the code and port change every time it opens. |
-| `phone connect` can't find the port | Give it yourself: `phone connect <port>`, using the port shown under **IP address & Port** on the Wireless debugging screen. |
-| Setup warns that adb is too old | Wireless pairing needs adb 30 or newer. Check with `adb version`, then reinstall Ubuntu with `proot-distro install ubuntu` to get a newer one. |
-| Claude stops while working in other apps | Run `phone fix-background` again, set Termux's battery use to Unrestricted, and tap **Acquire wakelock** in Termux's notification. |
-| Claude can't "see" buttons in a game or emulator | Normal: they draw their own screens. Claude switches to screenshots for those. |
+| Accessibility switch is greyed out | App info → **⋮** → **Allow restricted settings**, then turn it on. |
+| "Your Claude API key was rejected" | Check the key in the app (Settings → Change API key) and that your Anthropic account has credit. |
+| The card disappeared mid-job | Android may have turned the accessibility service off. Turn it back on and start the job again. |
+| It keeps trying the same thing | Tap Stop, then try again with a more specific request. The details log (Show details) shows what happened. |
 
-## What's in this repo
+## For developers
 
-| Path | What it is |
-|---|---|
-| `bin/phone` | The tool Claude uses to see and control the tablet (`phone -h` lists commands) |
-| `.claude/skills/fun-installer/SKILL.md` | Claude's instructions: workflow, rules, tips |
-| `.claude/settings.json` | Which `phone` commands run freely and which need your approval |
-| `config/blocked-apps.txt` | Apps Claude must never touch |
-| `notes/` | What Claude learned from past installs |
-| `setup/setup.sh` | Installs adb, Claude Code and the `phone` command inside Ubuntu |
-| `tests/` | Tests for `phone`, using a fake adb (`python3 -m unittest discover tests`) |
+- `android/` is the app: Kotlin, no UI libraries, official Anthropic Java SDK.
+  [GitHub Actions](.github/workflows/android.yml) builds it on every push and
+  publishes the APK as the `latest` release.
+- Main files: `Agent.kt` (step loop and rescue), `Plan.kt` (planner),
+  `Screen.kt` (reads the screen into numbered elements), `AgentService.kt`
+  (accessibility actions), `Safety.kt` (rules enforced in code),
+  `Prompts.kt` and `Tools.kt` (what Claude is told and can do).
+- The older Claude Code version for Termux (`bin/phone`, `setup/`, `.claude/`)
+  still works and needs no API key. See
+  [docs/termux-version.md](docs/termux-version.md).
