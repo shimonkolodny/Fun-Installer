@@ -153,15 +153,28 @@ class Claude(apiKey: String) : AutoCloseable {
         fun isRefusal(msg: BetaMessage): Boolean = msg.stopReason().orElse(null) == BetaStopReason.REFUSAL
         fun isPause(msg: BetaMessage): Boolean = msg.stopReason().orElse(null) == BetaStopReason.PAUSE_TURN
 
-        fun friendlyError(t: Throwable): String = when (t) {
-            is UnauthorizedException -> "Your Claude API key was rejected. Check it on the Fun Installer screen."
-            is PermissionDeniedException -> "Your API key isn't allowed to use this model."
-            is RateLimitException -> "Claude is limiting how fast your account can make requests. Wait a minute and try again."
-            is OverloadedException, is InternalServerException, is ServiceUnavailableException ->
-                "Claude is busy right now. Try again in a minute."
-            is BadRequestException -> "Claude rejected the request: ${t.message}"
-            is AnthropicIoException -> "Couldn't reach Claude. Check the internet connection."
-            else -> t.message ?: t.toString()
+        const val NO_CREDIT = "Your Anthropic account is out of API credit. Add credit under Plans & Billing at console.anthropic.com, then try again. (A Claude Pro or Max subscription doesn't include API credit.)"
+
+        /** The human-readable "message" inside an API error, without the JSON around it. */
+        private fun apiMessage(t: Throwable): String {
+            val raw = t.message ?: return t.toString()
+            return Regex("\"message\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").find(raw)?.groupValues?.get(1)
+                ?.replace("\\\"", "\"") ?: raw
+        }
+
+        fun friendlyError(t: Throwable): String {
+            val detail = apiMessage(t)
+            if (detail.contains("credit balance", ignoreCase = true)) return NO_CREDIT
+            return when (t) {
+                is UnauthorizedException -> "Your Claude API key was rejected. Check it with Change API key."
+                is PermissionDeniedException -> "Your API key isn't allowed to use this model. ($detail)"
+                is RateLimitException -> "Claude is limiting how fast your account can make requests. Wait a minute and try again."
+                is OverloadedException, is InternalServerException, is ServiceUnavailableException ->
+                    "Claude is busy right now. Try again in a minute."
+                is BadRequestException -> "Claude couldn't accept the request: $detail"
+                is AnthropicIoException -> "Couldn't reach Claude. Check the internet connection."
+                else -> detail
+            }
         }
     }
 }

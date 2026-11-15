@@ -232,8 +232,14 @@ class MainActivity : Activity() {
                 jobBox.addView(button("New job") { Jobs.reset(); requestInput.setText("") })
             }
             is JobState.Error -> {
-                jobBox.addView(text("Something went wrong", 17f, bold = true))
+                val noCredit = s.message == Claude.NO_CREDIT
+                jobBox.addView(text(if (noCredit) "Add API credit to continue" else "Something went wrong", 17f, bold = true))
                 jobBox.addView(text(s.message, 14f))
+                if (noCredit) {
+                    jobBox.addView(button("Add credit", primary = true) {
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://console.anthropic.com/settings/billing")))
+                    })
+                }
                 jobBox.addView(button("OK") { Jobs.reset() })
             }
         }
