@@ -29,7 +29,10 @@ to the tablet over ADB Wireless debugging).
 
 - `bin/phone` is a single Python 3 script using only the standard library
   (plus the `adb` and `curl` tools). Tests run against a fake adb:
-  `python3 -m unittest discover tests`.
+  `python3 -m unittest discover tests`. The tablet's Ubuntu has Python 3.14,
+  which is stricter (e.g. a bare `%` in argparse help text crashes), so also
+  run the tests with 3.14 (`uv python install 3.14`, then
+  `$(uv python find 3.14) -m unittest discover tests`).
 - `setup/termux-bootstrap.sh` is the one-command setup users paste into
   Termux. It fetches itself from the `claude/sleepy-cannon-1gfvo8` branch of
   the public repo; update the URL in it and in README.md if the branch changes.

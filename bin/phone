@@ -1090,7 +1090,7 @@ def build_parser():
     sp.add_argument("--out", help="where to save the PNG")
 
     sp = add("tap", cmd_tap, "Tap by number from `phone screen`, by visible text, or by coordinates.")
-    sp.add_argument("target", nargs="+", help='NUMBER | "text" | X Y | --pct X% Y%')
+    sp.add_argument("target", nargs="+", help='NUMBER | "text" | X Y | --pct X%% Y%%')
     sp.add_argument("--long", action="store_true", help="long-press instead of tap")
     sp.add_argument("--pct", action="store_true", help="X and Y are percentages of the screen")
     sp.add_argument("--nth", type=int, help="when text matches several elements, pick the Nth (1-based)")
