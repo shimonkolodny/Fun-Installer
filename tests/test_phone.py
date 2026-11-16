@@ -200,6 +200,27 @@ class PhoneTest(unittest.TestCase):
         self.assertIn("Paired with localhost:37011", r.stdout)
         self.assertIn(["pair", "localhost:37011", "123456"], self.log())
 
+    def test_pair_moves_on_when_a_port_hangs(self):
+        # The connection port makes `adb pair` hang; the real pairing port comes after it.
+        (self.fake / "mdns.txt").write_text(
+            "List of discovered mdns services\n"
+            "adb-XYZ\t_adb-tls-pairing._tcp\t192.168.1.5:45653\n"
+            "adb-XYZ\t_adb-tls-pairing._tcp\t192.168.1.5:39001")
+        (self.fake / "hang_target.txt").write_text("localhost:45653")
+        (self.fake / "pair_target.txt").write_text("localhost:39001")
+        self.env["PHONE_PAIR_TIMEOUT"] = "1"
+        r = self.phone("pair", "123456")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("Paired with localhost:39001", r.stdout)
+
+    def test_connect_moves_on_when_a_port_hangs(self):
+        (self.fake / "devices.txt").write_text("")
+        (self.fake / "hang_target.txt").write_text("localhost:45653")
+        self.env["PHONE_PAIR_TIMEOUT"] = "1"
+        r = self.phone("connect", "45653")
+        self.assertEqual(r.returncode, 1)
+        self.assertNotIn("Traceback", r.stderr)
+
     def test_pair_rejects_bad_code(self):
         r = self.phone("pair", "12ab")
         self.assertEqual(r.returncode, 1)

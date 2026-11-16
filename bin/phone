@@ -45,6 +45,7 @@ TERMUX_PKG = "com.termux"
 TERMUX_ACTIVITY = "com.termux/com.termux.app.TermuxActivity"
 ALWAYS_BLOCKED = ["com.termux", "com.termux.*"]
 SETTLE = float(os.environ.get("PHONE_SETTLE", "0.6"))
+PAIR_TIMEOUT = float(os.environ.get("PHONE_PAIR_TIMEOUT", "8"))
 STALE_AFTER = 600  # seconds before a saved screen is too old to tap by index
 PUSH_ROOTS = ("/sdcard/", "/storage/emulated/0/", "/storage/self/primary/", "/data/local/tmp/")
 
@@ -469,7 +470,13 @@ def cmd_pair(a):
             targets = [f"localhost:{p}" for p in _scan(30000, 61000)]
     last = ""
     for target in dict.fromkeys(targets):
-        r = run(["pair", target, code], use_serial=False, check=False, timeout=15)
+        # The wrong port (e.g. the connection port) makes `adb pair` hang rather than
+        # fail, so give each port a short timeout and move on to the next one.
+        try:
+            r = run(["pair", target, code], use_serial=False, check=False, timeout=PAIR_TIMEOUT)
+        except PhoneError as e:
+            last = str(e)
+            continue
         out = (r.stdout + r.stderr).strip()
         if "Successfully paired" in out:
             print(f"Paired with {target}. Now run: phone connect")
@@ -480,7 +487,10 @@ def cmd_pair(a):
 
 
 def _try_connect(target: str):
-    r = run(["connect", target], use_serial=False, check=False, timeout=15)
+    try:
+        r = run(["connect", target], use_serial=False, check=False, timeout=PAIR_TIMEOUT)
+    except PhoneError as e:  # a port that isn't adb's can hang; treat it as "not this one"
+        return False, str(e)
     out = (r.stdout + r.stderr).strip()
     low = out.lower()
     if "connected to" not in low or "failed" in low or "cannot" in low:

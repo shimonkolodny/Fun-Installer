@@ -46,6 +46,9 @@ elif verb == "connect":
     print(f"connected to {args[1]}")
 elif verb == "mdns":
     print(read("mdns.txt", "List of discovered mdns services").strip())
+elif verb in ("pair", "connect") and args[1] == read("hang_target.txt").strip():
+    import time
+    time.sleep(5)  # like adb pair/connect against a port that isn't the right service
 elif verb == "pair":
     if args[1] == read("pair_target.txt", args[1]).strip() and args[2] == "123456":
         print(f"Successfully paired to {args[1]} [guid=adb-XYZ]")

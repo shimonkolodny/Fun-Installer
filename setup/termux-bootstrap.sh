@@ -14,6 +14,8 @@ DISTRO="ubuntu"
 step() { printf '\n\033[1;36m== %s ==\033[0m\n' "$*"; }
 note() { printf '%s\n' "$*"; }
 in_ubuntu() { proot-distro login "$DISTRO" -- bash -lc "$*"; }
+# Throw away keys pressed while setup was busy, so they don't end up in a prompt.
+flush_input() { while read -r -t 0.1 -n 10000 _ 2>/dev/null; do :; done || true; }
 
 if [ -z "${PREFIX:-}" ] || [ ! -d /data/data/com.termux ]; then
   echo "Please run this inside the Termux app on your tablet."
@@ -62,14 +64,17 @@ This is the only fiddly part, and you only do it once:
   3. In Settings: Developer options > Wireless debugging > turn it ON
      (allow it for this Wi-Fi), then tap "Pair device with pairing code".
 EOF
+  flush_input
   read -rp $'\nPress Enter to open Developer options... ' _
   am start -a android.settings.APPLICATION_DEVELOPMENT_SETTINGS >/dev/null 2>&1 || true
   while true; do
-    read -rp $'\nType the 6-digit pairing code (or just press Enter to skip for now): ' code
-    if [ -z "$code" ]; then
+    flush_input
+    read -rp $'\nType the 6-digit pairing code (or just press Enter to skip for now): ' raw
+    if [ -z "$raw" ]; then
       note "Skipped. Later, inside Ubuntu, run: phone pair <code>   then: phone connect"
       break
     fi
+    code="${raw//[^0-9]/}"   # ignore stray keys (arrows, spaces) typed along with it
     if [[ ! "$code" =~ ^[0-9]{6}$ ]]; then
       note "The code is 6 digits, like 123456. Try again."
       continue
