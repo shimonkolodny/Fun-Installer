@@ -37,6 +37,12 @@ to the tablet over ADB Wireless debugging).
   Termux. It fetches itself from the `claude/sleepy-cannon-1gfvo8` branch of
   the public repo; update the URL in it and in README.md if the branch changes.
   `setup/setup.sh` runs inside Ubuntu.
+- `pairing-helper/` is a tiny Android app (no libraries) for the one-time
+  Wireless debugging pairing. Android cancels the pairing code when Settings
+  leaves the screen, so the user types it into this app's notification
+  instead. The app sends it to `phone pair --wait` on 127.0.0.1:47123. GitHub
+  Actions (`.github/workflows/pairing-helper.yml`) builds it on push and
+  publishes it as the `pairing-helper` release.
 - `android/` is a retired experiment: a standalone app using the paid Claude
   API, with Haiku doing the tapping. It went in circles in real use. See
   `docs/android-app.md`. Its GitHub Actions build is manual-only.

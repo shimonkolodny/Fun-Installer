@@ -447,27 +447,34 @@ def cmd_info(a):
     print(f"In front: {pkg or 'unknown'}")
 
 
-def cmd_pair(a):
-    if len(a.args) == 1:
-        port, code = None, a.args[0]
-    elif len(a.args) == 2:
-        port, code = a.args
-    else:
-        die("Usage: phone pair <code>   (or: phone pair <port> <code>)")
+HELPER_PORT = int(os.environ.get("PHONE_HELPER_PORT", "47123"))
+
+
+def pair_with_code(code: str, port: str | None = None, prefer: set | None = None):
+    """Try to pair with the 6-digit code. Returns (ok, message). Never raises."""
     if not re.fullmatch(r"\d{6}", code):
-        die("The pairing code is the 6-digit number in the 'Pair device with pairing code' dialog.")
-    if port:
-        targets = [port if ":" in port else f"localhost:{port}"]
-    else:
-        targets = []
-        r = run(["mdns", "services"], use_serial=False, check=False, timeout=10)
-        for line in r.stdout.splitlines():
-            m = re.search(r"_adb-tls-pairing\S*\s+(\d+\.\d+\.\d+\.\d+):(\d+)", line)
-            if m:
-                targets.append(f"localhost:{m.group(2)}")
-        if not targets:
-            print("Looking for the pairing port…", flush=True)
-            targets = [f"localhost:{p}" for p in _scan(30000, 61000)]
+        return False, "The pairing code is the 6-digit number in the 'Pair device with pairing code' dialog."
+    try:
+        if port:
+            targets = [port if ":" in port else f"localhost:{port}"]
+        else:
+            targets = []
+            r = run(["mdns", "services"], use_serial=False, check=False, timeout=10)
+            for line in r.stdout.splitlines():
+                m = re.search(r"_adb-tls-pairing\S*\s+(\d+\.\d+\.\d+\.\d+):(\d+)", line)
+                if m:
+                    targets.append(f"localhost:{m.group(2)}")
+            if not targets:
+                print("Looking for the pairing port…", flush=True)
+                ports = _scan(30000, 61000)
+                # Ports that weren't open before the pairing dialog appeared are tried first.
+                ports.sort(key=lambda p: 0 if prefer and p not in prefer else 1)
+                targets = [f"localhost:{p}" for p in ports]
+    except PhoneError as e:
+        return False, str(e)
+    if not targets:
+        return False, ("Couldn't find the pairing port. Is Wireless debugging on, with the "
+                       "'Pair device with pairing code' dialog open?")
     last = ""
     for target in dict.fromkeys(targets):
         # The wrong port (e.g. the connection port) makes `adb pair` hang rather than
@@ -479,11 +486,73 @@ def cmd_pair(a):
             continue
         out = (r.stdout + r.stderr).strip()
         if "Successfully paired" in out:
-            print(f"Paired with {target}. Now run: phone connect")
-            return
+            return True, f"Paired with {target}."
         last = out or last
-    die("Pairing failed" + (f" ({last.splitlines()[-1]})" if last else "") + ". Keep the 'Pair device with "
-        "pairing code' dialog open (use split screen) and type the code it shows right now.")
+    return False, ("Pairing failed" + (f" ({last.splitlines()[-1]})" if last else "") +
+                   ". The code is cancelled when Settings leaves the screen: open 'Pair device with "
+                   "pairing code' again and use the new code without leaving Settings.")
+
+
+def pair_wait():
+    """Wait for the code, typed here or sent by the Fun Installer Pairing helper app's notification."""
+    import select
+    srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        srv.bind(("127.0.0.1", HELPER_PORT))
+    except OSError:
+        die(f"Another 'phone pair --wait' is already waiting (port {HELPER_PORT} is busy).")
+    srv.listen(4)
+    baseline = set(_scan(30000, 61000))  # open before the pairing dialog: likely the connection port
+    print("Waiting for the 6-digit pairing code. Type it here and press Enter, or send it from\n"
+          "the Fun Installer Pairing notification. (Press Enter on an empty line to skip.)", flush=True)
+    watch = [srv, sys.stdin]
+    while True:
+        ready, _, _ = select.select(watch, [], [])
+        conn = None
+        if srv in ready:
+            conn, _ = srv.accept()
+            conn.settimeout(10)
+            try:
+                raw = conn.recv(64).decode(errors="ignore")
+            except OSError:
+                conn.close()
+                continue
+            print(f"Got a code from the notification.", flush=True)
+        else:
+            raw = sys.stdin.readline()
+            if raw == "":  # stdin closed: keep listening for the notification only
+                watch = [srv]
+                continue
+            if not raw.strip():
+                print("Skipped pairing.")
+                return 3
+        ok, msg = pair_with_code("".join(c for c in raw if c.isdigit()), prefer=baseline)
+        if conn:
+            try:
+                conn.sendall((("OK " if ok else "ERR ") + msg + "\n").encode())
+            except OSError:
+                pass
+            conn.close()
+        print(msg, flush=True)
+        if ok:
+            return 0
+        print("\nWaiting for the new code…", flush=True)
+
+
+def cmd_pair(a):
+    if a.wait:
+        return pair_wait()
+    if len(a.args) == 1:
+        port, code = None, a.args[0]
+    elif len(a.args) == 2:
+        port, code = a.args
+    else:
+        die("Usage: phone pair <code>   (or: phone pair <port> <code>, or: phone pair --wait)")
+    ok, msg = pair_with_code(code, port)
+    if not ok:
+        die(msg)
+    print(msg + " Now run: phone connect")
 
 
 def _try_connect(target: str):
@@ -1090,8 +1159,10 @@ def build_parser():
     add("status", cmd_status, "Is a device connected? Shows model and the app in front.")
     add("info", cmd_info, "Device details: Android version, CPU type (ABI), screen, free storage.")
     sp = add("pair", cmd_pair, "Pair with Wireless debugging (once per device).")
-    sp.add_argument("args", nargs="+", metavar="[PORT] CODE",
+    sp.add_argument("args", nargs="*", metavar="[PORT] CODE",
                     help="the 6-digit code from 'Pair device with pairing code' (the port is found automatically)")
+    sp.add_argument("--wait", action="store_true",
+                    help="wait for the code, typed here or sent from the Fun Installer Pairing notification")
     sp = add("connect", cmd_connect, "Connect to Wireless debugging. Finds the port by itself if omitted.")
     sp.add_argument("port", nargs="?", help="port (or host:port) shown under 'IP address & Port'")
 

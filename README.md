@@ -31,14 +31,17 @@ Termux ─▶ Ubuntu ─▶ Claude Code ─▶ phone ─▶ Wireless debugging �
 
 3. **Follow what it says.** It installs everything by itself (mostly waiting),
    then needs you twice:
-   - **Pairing (once):** the pairing code is cancelled the moment Settings
-     leaves the screen, so Termux and Settings must be **in split screen**.
-     Tap the **•••** at the top center of the screen (or use Recents) →
-     **Split screen**. In the Settings half, turn on **Wireless debugging**
-     and tap **Pair device with pairing code**. Then tap the Termux half and
-     type the 6-digit code, without switching apps. If Developer options
-     doesn't exist yet, go to **Settings → About tablet** and tap **Build
-     number** 7 times.
+   - **Pairing (once):** Android cancels the pairing code the moment
+     Settings leaves the screen, so you enter it **from a notification**.
+     Type **h** when asked to download the tiny
+     [Fun Installer Pairing helper](https://github.com/shimonkolodny/Fun-Installer/releases/download/pairing-helper/FunInstallerPairing.apk),
+     then install and open it. Tap **Open Developer options**, turn on
+     **Wireless debugging**, and tap **Pair device with pairing code**. Pull
+     down the notification shade and type the 6-digit code into the
+     **Fun Installer pairing** notification. If Developer options doesn't
+     exist yet, go to **Settings → About tablet** and tap **Build number**
+     7 times. (If your tablet allows Settings in split screen, you can type
+     the code straight into Termux instead.)
    - **Signing in:** Claude Code starts. Sign in with your Claude account and
      paste the code back.
 
@@ -97,7 +100,8 @@ Claude's own rules ([the skill](.claude/skills/fun-installer/SKILL.md)):
 | Problem | Fix |
 |---|---|
 | Setup stopped with an error | Run the same command again; it picks up where it left off. |
-| Pairing fails, or the code changes | The code is cancelled when Settings leaves the screen. Use split screen (••• at the top → Split screen) and type into the Termux half without switching apps. |
+| Pairing fails, or the code changes | The code is cancelled when Settings leaves the screen. Use the Pairing helper's notification (pull down the shade from Settings), or split screen if your tablet allows it. |
+| "Termux isn't waiting for a code" in the notification | Termux must be at the pairing step. Run the setup command again, or inside Ubuntu run `phone pair --wait`. |
 | "No device connected" later | Turn Wireless debugging back on, then start `fun` again. |
 | `claude` won't start | Claude Code doesn't officially support Android. It runs inside Ubuntu, which usually works but not always. Send the error message to Claude. |
 | Claude stops while working in other apps | Set Termux's battery use to **Unrestricted** and tap **Acquire wakelock** in Termux's notification. |
@@ -114,4 +118,5 @@ Claude's own rules ([the skill](.claude/skills/fun-installer/SKILL.md)):
 | `config/blocked-apps.txt` | Apps Claude must never touch |
 | `notes/` | What Claude learned from past installs |
 | `tests/` | Tests for `phone` using a fake adb (`python3 -m unittest discover tests`) |
+| `pairing-helper/` | The tiny Pairing helper app (type the pairing code into a notification) |
 | `android/` | A retired experiment: a standalone app using the Claude API. See [docs/android-app.md](docs/android-app.md). |

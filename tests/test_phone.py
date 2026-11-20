@@ -221,6 +221,56 @@ class PhoneTest(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertNotIn("Traceback", r.stderr)
 
+    def _helper_port(self):
+        import socket
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            port = s.getsockname()[1]
+        self.env["PHONE_HELPER_PORT"] = str(port)
+        (self.fake / "mdns.txt").write_text(
+            "List of discovered mdns services\nadb-XYZ\t_adb-tls-pairing._tcp\t192.168.1.5:37011")
+        (self.fake / "pair_target.txt").write_text("localhost:37011")
+        return port
+
+    def test_pair_wait_accepts_typed_code(self):
+        self._helper_port()
+        r = subprocess.run([sys.executable, str(PHONE), "pair", "--wait"], env=self.env, input="x123456\n",
+                           capture_output=True, text=True, timeout=60)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("Paired with localhost:37011", r.stdout)
+
+    def test_pair_wait_accepts_code_from_notification_helper(self):
+        import socket
+        import time
+        port = self._helper_port()
+        proc = subprocess.Popen([sys.executable, str(PHONE), "pair", "--wait"], env=self.env,
+                                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            reply = None
+            for _ in range(100):  # wait for it to start listening
+                try:
+                    with socket.create_connection(("127.0.0.1", port), timeout=30) as s:
+                        s.sendall(b"111111\n")  # wrong code first, like a stale one
+                        bad = s.makefile().readline()
+                    break
+                except ConnectionRefusedError:
+                    time.sleep(0.1)
+            self.assertTrue(bad.startswith("ERR"), bad)
+            with socket.create_connection(("127.0.0.1", port), timeout=30) as s:
+                s.sendall(b"123456\n")
+                reply = s.makefile().readline()
+            self.assertTrue(reply.startswith("OK Paired with localhost:37011"), reply)
+            self.assertEqual(proc.wait(timeout=30), 0)
+        finally:
+            proc.kill()
+            proc.communicate()
+
+    def test_pair_wait_empty_line_skips(self):
+        self._helper_port()
+        r = subprocess.run([sys.executable, str(PHONE), "pair", "--wait"], env=self.env, input="\n",
+                           capture_output=True, text=True, timeout=60)
+        self.assertEqual(r.returncode, 3)
+
     def test_pair_rejects_bad_code(self):
         r = self.phone("pair", "12ab")
         self.assertEqual(r.returncode, 1)

@@ -1,0 +1,44 @@
+name: Build pairing helper
+
+on:
+  push:
+    paths:
+      - "pairing-helper/**"
+      - ".github/workflows/pairing-helper.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pairing-helper
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build the APK
+        working-directory: pairing-helper
+        run: ./gradlew --no-daemon --stacktrace assembleDebug
+
+      - name: Publish it as the "pairing-helper" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp pairing-helper/app/build/outputs/apk/debug/app-debug.apk FunInstallerPairing.apk
+          gh release delete pairing-helper --yes --cleanup-tag || true
+          gh release create pairing-helper FunInstallerPairing.apk \
+            --title "Fun Installer Pairing helper" \
+            --target "$GITHUB_SHA" \
+            --latest=false \
+            --notes "A tiny helper for the one-time Wireless debugging pairing: type the code into a notification instead of switching apps. Built from ${GITHUB_SHA::7}."
