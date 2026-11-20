@@ -31,11 +31,14 @@ Termux ─▶ Ubuntu ─▶ Claude Code ─▶ phone ─▶ Wireless debugging �
 
 3. **Follow what it says.** It installs everything by itself (mostly waiting),
    then needs you twice:
-   - **Pairing (once):** it opens Developer options. Put Termux and Settings
-     side by side (split screen). Turn on **Wireless debugging**, tap
-     **Pair device with pairing code**, and type the 6-digit code into Termux.
-     If Developer options doesn't exist yet, go to **Settings → About tablet**
-     and tap **Build number** 7 times.
+   - **Pairing (once):** the pairing code is cancelled the moment Settings
+     leaves the screen, so Termux and Settings must be **in split screen**.
+     Tap the **•••** at the top center of the screen (or use Recents) →
+     **Split screen**. In the Settings half, turn on **Wireless debugging**
+     and tap **Pair device with pairing code**. Then tap the Termux half and
+     type the 6-digit code, without switching apps. If Developer options
+     doesn't exist yet, go to **Settings → About tablet** and tap **Build
+     number** 7 times.
    - **Signing in:** Claude Code starts. Sign in with your Claude account and
      paste the code back.
 
@@ -94,7 +97,7 @@ Claude's own rules ([the skill](.claude/skills/fun-installer/SKILL.md)):
 | Problem | Fix |
 |---|---|
 | Setup stopped with an error | Run the same command again; it picks up where it left off. |
-| Pairing fails | Keep the pairing dialog open (split screen) and type the code it shows right now. The code changes each time the dialog opens. |
+| Pairing fails, or the code changes | The code is cancelled when Settings leaves the screen. Use split screen (••• at the top → Split screen) and type into the Termux half without switching apps. |
 | "No device connected" later | Turn Wireless debugging back on, then start `fun` again. |
 | `claude` won't start | Claude Code doesn't officially support Android. It runs inside Ubuntu, which usually works but not always. Send the error message to Claude. |
 | Claude stops while working in other apps | Set Termux's battery use to **Unrestricted** and tap **Acquire wakelock** in Termux's notification. |

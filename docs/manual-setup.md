@@ -37,8 +37,10 @@ bash ~/Fun-Installer/setup/setup.sh
 
 ### 5. Pair (once)
 
-The pairing code disappears if you leave the Settings screen, so use **split
-screen** with Termux and Settings side by side.
+The pairing code is cancelled the moment Settings leaves the screen, so put
+Termux and Settings in **split screen**: tap the **•••** at the top center of
+the screen (or open Recents and tap the app's icon) → **Split screen**. Then
+tap into the Termux half to type, without switching apps.
 
 1. In Wireless debugging, tap **Pair device with pairing code**.
 2. In Termux (inside Ubuntu), type the 6-digit code it shows:

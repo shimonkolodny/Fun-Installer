@@ -54,19 +54,29 @@ if in_ubuntu "phone status" >/dev/null 2>&1 || in_ubuntu "phone connect" >/dev/n
   note "Already connected."
 else
   cat <<'EOF'
-This is the only fiddly part, and you only do it once:
+This is the only fiddly part, and you only do it once.
 
-  1. If "Developer options" isn't in Settings yet:
-     Settings > About tablet > tap "Build number" 7 times.
+IMPORTANT: the pairing code is cancelled the moment Settings leaves the
+screen. So Termux and Settings must be on screen together (split screen),
+and you type the code into the Termux half without switching apps.
+
+  1. If "Developer options" isn't in Settings yet: open Settings >
+     About tablet > tap "Build number" 7 times, then come back here.
      (Samsung: About tablet > Software information > Build number.)
-  2. Put Termux and Settings side by side (split screen), so the
-     pairing code stays on screen while you type it here.
-  3. In Settings: Developer options > Wireless debugging > turn it ON
-     (allow it for this Wi-Fi), then tap "Pair device with pairing code".
+  2. Press Enter below. Settings should open next to Termux.
+     If it opens full-screen instead: tap the ••• at the top center of
+     the screen (or open Recents and tap the app's icon) > Split screen,
+     and put Termux in the other half.
+  3. In the Settings half: Wireless debugging > turn it ON (allow it for
+     this Wi-Fi), then tap "Pair device with pairing code".
+  4. Tap the Termux half and type the 6-digit code shown in Settings.
 EOF
   flush_input
-  read -rp $'\nPress Enter to open Developer options... ' _
-  am start -a android.settings.APPLICATION_DEVELOPMENT_SETTINGS >/dev/null 2>&1 || true
+  read -rp $'\nPress Enter to open Developer options next to Termux... ' _
+  # FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_LAUNCH_ADJACENT: on tablets this opens
+  # Settings in the other half of a split screen. Fall back to a normal launch.
+  am start -f 0x10001000 -a android.settings.APPLICATION_DEVELOPMENT_SETTINGS >/dev/null 2>&1 ||
+    am start -a android.settings.APPLICATION_DEVELOPMENT_SETTINGS >/dev/null 2>&1 || true
   while true; do
     flush_input
     read -rp $'\nType the 6-digit pairing code (or just press Enter to skip for now): ' raw
@@ -84,7 +94,9 @@ EOF
       note "Connected. Also set Termux's battery use to 'Unrestricted' if your tablet has that setting."
       break
     fi
-    note "That didn't work. Keep the pairing dialog open and type the code it shows now."
+    note "That didn't work. If the code in Settings is different now, the dialog was"
+    note "closed when Settings left the screen. Keep both apps in split screen, tap"
+    note "\"Pair device with pairing code\" again, then tap the Termux half and type the new code."
   done
 fi
 
